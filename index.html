@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoConverter</title>
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="description" content="Convert USDT to CFA Francs using real-time exchange rates">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💱</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💱</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3498db',
+                        secondary: '#2c3e50',
+                        accent: '#ff6b35',
+                        light: '#ecf0f1',
+                        dark: '#2c3e50'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        }
+        
+        .card-gradient {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        }
+        
+        .refresh-animation {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Installation prompt styling */
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 320px;
+            transform: translateY(150%);
+            transition: transform 0.4s ease-out;
+        }
+
+        .install-prompt.show {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg flex items-center justify-center p-4">
+    <div class="w-full max-w-md mx-auto">
+        <!-- App Container -->
+        <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-secondary to-primary text-white p-6 text-center">
+                <h1 class="text-2xl font-bold mb-1">USDT to CFA Converter</h1>
+                <p class="text-light opacity-90">Real-time conversion with live exchange rates</p>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="p-6">
+                <!-- Converter Card -->
+                <div class="card-gradient rounded-lg shadow-md p-5 mb-5">
+                    <!-- Input Group -->
+                    <div class="mb-5">
+                        <label for="usdt-amount" class="block text-sm font-medium text-dark mb-2">USDT Amount</label>
+                        <div class="relative">
+                            <input type="number" id="usdt-amount" placeholder="Enter amount" min="0" step="0.01" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
+                            <span class="absolute right-3 top-3 text-gray-500">USDT</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Swap Button -->
+                    <div class="flex justify-center my-3">
+                        <button id="swap-btn" class="bg-primary text-white p-2 rounded-full shadow-md hover:bg-secondary transition-all duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Output Group -->
+                    <div class="mb-5">
+                        <label for="cfa-amount" class="block text-sm font-medium text-dark mb-2">CFA Francs</label>
+                        <div class="relative">
+                            <input type="number" id="cfa-amount" placeholder="Result" readonly
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 outline-none">
+                            <span class="absolute right-3 top-3 text-gray-500">XAF</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Rate Info -->
+                    <div class="bg-blue-50 p-4 rounded-lg mb-5">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-dark">Exchange Rate:</span>
+                            <span id="exchange-rate" class="text-sm font-semibold text-primary">1 USDT = ... CFA</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-sm font-medium text-dark">Last Updated:</span>
+                            <span id="last-updated" class="text-sm text-gray-600">--</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-3">
+                        <button id="convert-btn" class="flex-1 bg-accent text-white py-3 rounded-lg font-semibold shadow-md hover:opacity-90 transition-all duration-300 pulse">
+                            Convert
+                        </button>
+                        <button id="refresh-rate-btn" class="bg-primary text-white p-3 rounded-lg font-semibold shadow-md hover:bg-secondary transition-all duration-300 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- PWA Install Button -->
+                <div id="pwa-install-container" class="hidden mb-5">
+                    <button id="pwa-install-btn" class="w-full bg-green-500 text-white py-3 rounded-lg font-semibold shadow-md hover:bg-green-600 transition-all duration-300 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Install App
+                    </button>
+                </div>
+                
+                <!-- Service Worker Status -->
+                <div id="sw-status" class="text-center text-xs text-gray-500 mb-2">
+                    Service Worker: <span id="sw-state">Checking...</span>
+                </div>
+                
+                <!-- Update Notice -->
+                <div id="update-notice" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-lg mb-5" role="alert">
+                    <p class="font-bold">Update Available</p>
+                    <p>A new version of the app is available. <button id="refresh-btn" class="font-bold underline">Click here to refresh</button></p>
+                </div>
+                
+                <!-- API Status -->
+                <div id="api-status" class="flex items-center justify-center text-sm text-light mb-2">
+                    <span class="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                    <span>API Connected</span>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="bg-gray-100 p-4 text-center text-xs text-gray-600">
+                <p>Data provided by <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener" class="text-primary hover:underline">ExchangeRate-API</a></p>
+            </div>
+        </div>
+        
+        <!-- Offline Notification -->
+        <div id="offline-notification" class="hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
+            You are currently offline. Using cached data.
+        </div>
+        
+        <!-- Custom Install Prompt -->
+        <div id="install-prompt" class="install-prompt">
+            <div class="font-semibold mb-2">Install USDT Converter</div>
+            <p class="text-sm text-gray-600 mb-3">Add this app to your home screen for faster access</p>
+            <div class="flex justify-between">
+                <button id="install-cancel" class="px-4 py-2 text-gray-600 hover:text-gray-800">Not Now</button>
+                <button id="install-confirm" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary">Install</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const usdtInput = document.getElementById('usdt-amount');
+        const cfaInput = document.getElementById('cfa-amount');
+        const convertBtn = document.getElementById('convert-btn');
+        const swapBtn = document.getElementById('swap-btn');
+        const refreshRateBtn = document.getElementById('refresh-rate-btn');
+        const exchangeRateEl = document.getElementById('exchange-rate');
+        const lastUpdatedEl = document.getElementById('last-updated');
+        const updateNotice = document.getElementById('update-notice');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const apiStatus = document.getElementById('api-status');
+        const offlineNotification = document.getElementById('offline-notification');
+        const pwaInstallContainer = document.getElementById('pwa-install-container');
+        const pwaInstallBtn = document.getElementById('pwa-install-btn');
+        const swStatus = document.getElementById('sw-state');
+        const installPrompt = document.getElementById('install-prompt');
+        const installConfirm = document.getElementById('install-confirm');
+        const installCancel = document.getElementById('install-cancel');
+
+        // State variables
+        let exchangeRate = null;
+        let isConvertingUSDTtoCFA = true;
+        let lastFetchTime = null;
+        let isOnline = true;
+        let deferredPrompt = null;
+
+        // API Configuration - Using ExchangeRate-API
+        const API_URL = 'https://v6.exchangerate-api.com/v6/b8d96b0f060f382d48b52924/latest/USD';
+        const FALLBACK_RATE = 600; // Fallback rate if API fails
+
+        // Initialize the app
+        function init() {
+            // Check online status
+            window.addEventListener('online', () => {
+                isOnline = true;
+                updateOnlineStatus();
+                fetchExchangeRate();
+            });
+            
+            window.addEventListener('offline', () => {
+                isOnline = false;
+                updateOnlineStatus();
+            });
+            
+            // Load saved data if available
+            const savedRate = localStorage.getItem('usdtToCfaRate');
+            const savedTime = localStorage.getItem('lastRateUpdate');
+            
+            if (savedRate && savedTime) {
+                exchangeRate = parseFloat(savedRate);
+                lastFetchTime = new Date(savedTime);
+                updateUI();
+            }
+            
+            // Fetch current rate
+            fetchExchangeRate();
+            
+            // Set up event listeners
+            convertBtn.addEventListener('click', convert);
+            swapBtn.addEventListener('click', toggleConversionDirection);
+            refreshRateBtn.addEventListener('click', fetchExchangeRate);
+            usdtInput.addEventListener('keyup', event => {
+                if (event.key === 'Enter') convert();
+            });
+            
+            // Check for app updates
+            checkForUpdates();
+            
+            // Initial online status check
+            updateOnlineStatus();
+            
+            // Register Service Worker
+            registerServiceWorker();
+            
+            // Set up PWA installation prompt
+            setupPWAInstall();
+        }
+
+        // Register Service Worker
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                        swStatus.textContent = 'Registered';
+                        swStatus.classList.add('text-green-600');
+                        
+                        // Check for updates every hour
+                        setInterval(() => {
+                            registration.update();
+                        }, 60 * 60 * 1000);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                        swStatus.textContent = 'Failed';
+                        swStatus.classList.add('text-red-600');
+                    });
+            } else {
+                swStatus.textContent = 'Not Supported';
+                swStatus.classList.add('text-red-600');
+            }
+        }
+
+        // Set up PWA installation
+        function setupPWAInstall() {
+            // Listen for beforeinstallprompt event
+            window.addEventListener('beforeinstallprompt', (e) => {
+                // Prevent the mini-infobar from appearing on mobile
+                e.preventDefault();
+                // Stash the event so it can be triggered later
+                deferredPrompt = e;
+                
+                // Show custom install button
+                pwaInstallContainer.classList.remove('hidden');
+                
+                // Set up install button click handler
+                pwaInstallBtn.addEventListener('click', () => {
+                    // Show the install prompt
+                    deferredPrompt.prompt();
+                    // Wait for the user to respond to the prompt
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('User accepted the install prompt');
+                            pwaInstallContainer.classList.add('hidden');
+                        } else {
+                            console.log('User dismissed the install prompt');
+                        }
+                        deferredPrompt = null;
+                    });
+                });
+            });
+            
+            // Listen for app installed event
+            window.addEventListener('appinstalled', () => {
+                console.log('PWA was installed');
+                pwaInstallContainer.classList.add('hidden');
+                installPrompt.classList.remove('show');
+            });
+            
+            // Check if the app is already installed
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('Running in standalone mode');
+                pwaInstallContainer.classList.add('hidden');
+            }
+            
+            // Set up custom install prompt buttons
+            installConfirm.addEventListener('click', () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('User accepted the install prompt');
+                        }
+                        deferredPrompt = null;
+                        installPrompt.classList.remove('show');
+                    });
+                }
+            });
+            
+            installCancel.addEventListener('click', () => {
+                installPrompt.classList.remove('show');
+            });
+            
+            // Show custom install prompt after 10 seconds
+            setTimeout(() => {
+                if (deferredPrompt && !pwaInstallContainer.classList.contains('hidden')) {
+                    installPrompt.classList.add('show');
+                }
+            }, 10000);
+        }
+
+        // Fetch exchange rate from API
+        async function fetchExchangeRate() {
+            // Show loading state
+            exchangeRateEl.innerHTML = '<span class="refresh-animation">⟳</span> Fetching rate...';
+            refreshRateBtn.disabled = true;
+            
+            try {
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    throw new Error('API response not OK');
+                }
+                
+                const data = await response.json();
+                
+                if (data && data.conversion_rates && data.conversion_rates.XOF) {
+                    exchangeRate = data.conversion_rates.XOF;
+                    lastFetchTime = new Date();
+                    
+                    // Save to localStorage
+                    localStorage.setItem('usdtToCfaRate', exchangeRate);
+                    localStorage.setItem('lastRateUpdate', lastFetchTime.toISOString());
+                    
+                    updateUI();
+                    showRateRefreshNotification();
+                } else {
+                    throw new Error('Invalid data format from API');
+                }
+            } catch (error) {
+                console.error('Error fetching exchange rate:', error);
+                
+                // Use fallback rate if available
+                if (localStorage.getItem('usdtToCfaRate')) {
+                    exchangeRate = parseFloat(localStorage.getItem('usdtToCfaRate'));
+                    lastFetchTime = new Date(localStorage.getItem('lastRateUpdate'));
+                    updateUI();
+                } else {
+                    // Use hardcoded fallback rate
+                    exchangeRate = FALLBACK_RATE;
+                    lastFetchTime = new Date();
+                    exchangeRateEl.textContent = `1 USDT = ${exchangeRate.toFixed(2)} CFA (approx)`;
+                    lastUpdatedEl.textContent = 'Using approximate rate';
+                }
+            } finally {
+                refreshRateBtn.disabled = false;
+            }
+        }
+
+        // Show notification when rate is refreshed
+        function showRateRefreshNotification() {
+            const notification = document.createElement('div');
+            notification.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg';
+            notification.textContent = 'Exchange rate updated!';
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Convert between USDT and CFA
+        function convert() {
+            if (!exchangeRate) {
+                alert('Exchange rate not available yet. Please try again in a moment.');
+                return;
+            }
+            
+            if (isConvertingUSDTtoCFA) {
+                const usdtAmount = parseFloat(usdtInput.value);
+                if (isNaN(usdtAmount) || usdtAmount < 0) {
+                    alert('Please enter a valid USDT amount');
+                    return;
+                }
+                
+                const cfaAmount = usdtAmount * exchangeRate;
+                cfaInput.value = cfaAmount.toFixed(2);
+            } else {
+                const cfaAmount = parseFloat(cfaInput.value);
+                if (isNaN(cfaAmount) || cfaAmount < 0) {
+                    alert('Please enter a valid CFA amount');
+                    return;
+                }
+                
+                const usdtAmount = cfaAmount / exchangeRate;
+                usdtInput.value = usdtAmount.toFixed(6);
+            }
+        }
+
+        // Toggle conversion direction
+        function toggleConversionDirection() {
+            isConvertingUSDTtoCFA = !isConvertingUSDTtoCFA;
+            
+            // Swap input values
+            const temp = usdtInput.value;
+            usdtInput.value = cfaInput.value;
+            cfaInput.value = temp;
+            
+            // Update labels and placeholders
+            const usdtLabel = document.querySelector('label[for="usdt-amount"]');
+            const cfaLabel = document.querySelector('label[for="cfa-amount"]');
+            
+            if (isConvertingUSDTtoCFA) {
+                usdtLabel.textContent = 'USDT Amount';
+                cfaLabel.textContent = 'CFA Francs';
+                usdtInput.placeholder = 'Enter amount';
+                cfaInput.placeholder = 'Result';
+                usdtInput.readOnly = false;
+                cfaInput.readOnly = true;
+            } else {
+                usdtLabel.textContent = 'CFA Francs';
+                cfaLabel.textContent = 'USDT Amount';
+                usdtInput.placeholder = 'Result';
+                cfaInput.placeholder = 'Enter amount';
+                usdtInput.readOnly = true;
+                cfaInput.readOnly = false;
+            }
+            
+            updateUI();
+        }
+
+        // Update UI with current rate and time
+        function updateUI() {
+            if (exchangeRate) {
+                if (isConvertingUSDTtoCFA) {
+                    exchangeRateEl.textContent = `1 USDT = ${exchangeRate.toFixed(2)} CFA`;
+                } else {
+                    exchangeRateEl.textContent = `1 CFA = ${(1 / exchangeRate).toFixed(6)} USDT`;
+                }
+            }
+            
+            if (lastFetchTime) {
+                lastUpdatedEl.textContent = lastFetchTime.toLocaleTimeString();
+            }
+        }
+
+        // Update online status indicator
+        function updateOnlineStatus() {
+            if (isOnline) {
+                apiStatus.innerHTML = '<span class="h-2 w-2 rounded-full bg-green-500 mr-2"></span><span>API Connected</span>';
+                offlineNotification.classList.add('hidden');
+            } else {
+                apiStatus.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-500 mr-2"></span><span>Offline Mode</span>';
+                offlineNotification.classList.remove('hidden');
+                
+                // Hide offline notification after 5 seconds
+                setTimeout(() => {
+                    offlineNotification.classList.add('hidden');
+                }, 5000);
+            }
+        }
+
+        // Check for app updates
+        function checkForUpdates() {
+            // Listen for the controllerchange event to detect updates
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    updateNotice.classList.remove('hidden');
+                });
+                
+                // Refresh button handler
+                refreshBtn.addEventListener('click', () => {
+                    window.location.reload();
+                });
+            }
+        }
+
+        // Periodically update exchange rate (every 2 minutes)
+        setInterval(fetchExchangeRate, 2 * 60 * 1000);
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+
+    <!-- Inline Service Worker for easier implementation -->
+    <script>
+        // This would normally be in a separate sw.js file
+        // But including it here for simplicity
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = 'crypto-converterv4';
+                const urlsToCache = [
+                    '/',
+                    'CryptoConverter.html',
+                    'manifest.json'
+                ];
+
+                // Install event
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                return cache.addAll(urlsToCache);
+                            })
+                    );
+                });
+
+                // Fetch event
+                self.addEventListener('fetch', event => {
+                    // Skip API requests for real-time data
+                    if (event.request.url.includes('exchangerate-api.com')) {
+                        return fetch(event.request)
+                            .then(response => {
+                                // Return the API response directly
+                                return response;
+                            })
+                            .catch(error => {
+                                console.log('Fetch failed; returning offline page instead.', error);
+                            });
+                    }
+                    
+                    event.respondWith(
+                        caches.match(event.request)
+                            .then(response => {
+                                // Return cached version or fetch from network
+                                return response || fetch(event.request)
+                                    .then(fetchResponse => {
+                                        // Check if we received a valid response
+                                        if(!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
+                                            return fetchResponse;
+                                        }
+
+                                        // Clone the response
+                                        const responseToCache = fetchResponse.clone();
+
+                                        caches.open(CACHE_NAME)
+                                            .then(cache => {
+                                                cache.put(event.request, responseToCache);
+                                            });
+
+                                        return fetchResponse;
+                                    })
+                                    .catch(() => {
+                                        // If both fail, show a generic fallback
+                                        if (event.request.destination === 'document') {
+                                            return caches.match('/');
+                                        }
+                                    });
+                            })
+                    );
+                });
+
+                // Activate event
+                self.addEventListener('activate', event => {
+                    event.waitUntil(
+                        caches.keys().then(cacheNames => {
+                            return Promise.all(
+                                cacheNames.map(cache => {
+                                    if (cache !== CACHE_NAME) {
+                                        return caches.delete(cache);
+                                    }
+                                })
+                            );
+                        })
+                    );
+                });
+            `;
+            
+            // Create a Blob from the service worker code
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swURL = URL.createObjectURL(blob);
+            
+            // Register the service worker
+            navigator.serviceWorker.register(swURL)
+                .then(registration => {
+                    console.log('SW registered: ', registration);
+                })
+                .catch(registrationError => {
+                    console.log('SW registration failed: ', registrationError);
+                });
+        }
+    </script>
+</body>
+</html>
